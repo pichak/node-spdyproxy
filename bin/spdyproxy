@@ -3,11 +3,14 @@
 // uncomment to obtain useful stack traces on exceptions
 // require("long-stack-traces");
 
-var path = require('path')
+var newrelic = require('newrelic')
+  , path = require('path')
   , pkg = require('../package.json')
   , version = pkg.version
   , colors = require('colors')
   , spdyProxy = require('../lib/server')
+  , http = require('http')
+  , httpProxy = require('proxy')
   , fs = require('fs')
   , opts = require('optimist')
     .usage('Usage: $0')
@@ -32,6 +35,12 @@ var path = require('path')
         alias: 'p',
         description: 'proxy port',
         default: 44300
+      },
+      httpPort: {
+        demand: false,
+        alias: 'o',
+        description: 'http proxy port',
+        default: 8080
       },
       user: {
         demand: false,
@@ -98,10 +107,11 @@ if (opts.ca) opts.ca = fs.readFileSync(path.resolve(opts.ca));
 if (opts.requestCert) opts.rejectUnauthorized=true;
 
 process.on('uncaughtException', function(e) {
-  console.error('Error: '.red + e);
+ console.error('Error: '.red + e);
 });
 
 var proxy = new spdyProxy.createServer(opts);
+var server = httpProxy(http.createServer());
 
 if (opts.user) {
   var CmdPwdHelper = require('../lib/cmdpwdhelper');
@@ -127,6 +137,7 @@ if (opts.logFile) {
 }
 
 proxy.listen(opts.port);
+server.listen(opts.httpPort);
 
 console.log(
   "Started SPDY proxy, port: ".green + opts.port
